@@ -524,7 +524,7 @@ void ToggleMemPoolAutoDefrag(MemPool *const mempool)
 //----------------------------------------------------------------------------------
 union ObjInfo {
     uint8_t *const byte;
-    size_t *const size;
+    size_t *const index;
 };
 
 ObjPool CreateObjPool(const size_t objsize, const size_t len)
@@ -548,7 +548,7 @@ ObjPool CreateObjPool(const size_t objsize, const size_t len)
             for (size_t i=0; i<objpool.freeBlocks; i++)
             {
                 union ObjInfo block = { .byte = &objpool.stack.mem[i*objpool.objSize] };
-                *block.size = i + 1;
+                *block.index = i + 1;
             }
             
             objpool.stack.base = objpool.stack.mem;
@@ -572,7 +572,7 @@ ObjPool CreateObjPoolFromBuffer(void *const buf, const size_t objsize, const siz
         for (size_t i=0; i<objpool.freeBlocks; i++)
         {
             union ObjInfo block = { .byte = &objpool.stack.mem[i*objpool.objSize] };
-            *block.size = i + 1;
+            *block.index = i + 1;
         }
         
         objpool.stack.base = objpool.stack.mem;
@@ -605,7 +605,7 @@ void *ObjPoolAlloc(ObjPool *const objpool)
             
             // after allocating, we set head to the address of the index that *Head holds.
             // Head = &pool[*Head * pool.objsize];
-            objpool->stack.base = (objpool->freeBlocks != 0UL)? objpool->stack.mem + (*ret.size*objpool->objSize) : NULL;
+            objpool->stack.base = (objpool->freeBlocks != 0UL)? objpool->stack.mem + (*ret.index*objpool->objSize) : NULL;
             memset(ret.byte, 0, objpool->objSize);
             return ret.byte;
         }
@@ -622,7 +622,7 @@ void ObjPoolFree(ObjPool *const restrict objpool, void *ptr)
         // When we free our pointer, we recycle the pointer space to store the previous index and then we push it as our new head.
         // *p = index of Head in relation to the buffer;
         // Head = p;
-        *p.size = (objpool->stack.base != NULL)? (objpool->stack.base - objpool->stack.mem)/objpool->objSize : objpool->stack.size;
+        *p.index = (objpool->stack.base != NULL)? (objpool->stack.base - objpool->stack.mem)/objpool->objSize : objpool->stack.size;
         objpool->stack.base = p.byte;
         objpool->freeBlocks++;
     }
